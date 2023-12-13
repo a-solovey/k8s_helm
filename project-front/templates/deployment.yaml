@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "service.fullname" . }}
+  labels:
+    {{- include "service.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      {{- include "service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "service.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers: 
+      - name: {{ .Chart.Name }}-dist
+        image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        command:  ["/bin/sh", "-c", "cp -R /dist/* /tmp/"]
+        volumeMounts:
+        - name: datavol
+          mountPath: /tmp
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}/{{ .Values.image.name2 }}:latest"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            {{- range $name, $portDesc := .Values.service.ports }}
+            - name: {{ $name }}
+              containerPort: {{ $portDesc.port }}
+              protocol: {{ $portDesc.protocol }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.service.livenessProbe.path }}
+              port: {{ .Values.service.livenessProbe.port }}
+            initialDelaySeconds: {{ .Values.service.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.service.livenessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.service.livenessProbe.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.service.readinessProbe.path }}
+              port: {{ .Values.service.readinessProbe.port }}
+            initialDelaySeconds: {{ .Values.service.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.service.readinessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.service.readinessProbe.failureThreshold }}
+          env:
+            - name: VITE_SERVICE_GID_NP
+              value: "{{ .Values.env.vite.service.gidnp }}"
+            - name: VITE_SERVICE_ADMIN
+              value: "{{ .Values.env.vite.service.admin }}"
+            - name: VITE_GID_ROAD_CODE
+              value: "{{ .Values.env.vite.service.road }}"
+            - name: VITE_GID_NETWORK_BASE_URL
+              value: "{{ .Values.env.vite.service.base_url }}"
+            - name: VITE_APVO_WINDOW_DATA_URL
+              value: "{{ .Values.env.vite.service.apvo }}"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: datavol
+              mountPath: /usr/share/nginx/html
+            {{- range $name, $volume := .Values.volumes }}
+            - name: {{ $name }}
+              mountPath: {{ $volume.mountPath }}
+              {{- if $volume.subPath }}
+              subPath: {{ $volume.subPath }}
+              {{- end }}
+              readOnly: {{ $volume.readOnly }}
+            {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: datavol
+          emptyDir: {}
+        {{- range $name, $volume := .Values.volumes }}
+        - name: {{ $name }}
+          configMap:
+            name: {{ include "service.fullname" $ }}-{{ $name }}
+            items:
+                {{- range $volumeItem := $volume.items }}
+                  - key: {{ $volumeItem.key }}
+                    path: {{ $volumeItem.path }}
+                {{- end }}
+        {{- end }}

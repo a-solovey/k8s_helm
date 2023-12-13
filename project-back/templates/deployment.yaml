@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "service.fullname" . }}
+  labels:
+    {{- include "service.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      {{- include "service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "service.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            {{- range $name, $portDesc := .Values.service.ports }}
+            - name: {{ $name }}
+              containerPort: {{ $portDesc.port }}
+              protocol: {{ $portDesc.protocol }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.service.livenessProbe.path }}
+              port: {{ .Values.service.livenessProbe.port }}
+              httpHeaders:
+                - name: Authorization
+                  value: Basic bW9uaXRvcjptb25pdG9yXzEyMw==
+            initialDelaySeconds: {{ .Values.service.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.service.livenessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.service.livenessProbe.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.service.readinessProbe.path }}
+              port: {{ .Values.service.readinessProbe.port }}
+            initialDelaySeconds: {{ .Values.service.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.service.readinessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.service.readinessProbe.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: CONFIG_SERVER
+              value: "{{ .Values.env.config.server }}"
+            - name: SPRING_DATASOURCE_URL
+              value: "{{ .Values.env.spring.datasource.url }}"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "{{ .Values.env.spring.datasource.username }}"            
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "{{ .Values.env.spring.datasource.password }}"
+            - name: AUTH_MODE
+              value: "{{ .Values.env.mode }}"
+            - name: ADMIN_TSFT_URL
+              value: "{{ .Values.env.admin }}"
+            - name: POD_NAME                        
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: IMG_VERSION
+              value: {{ .Values.image.tag }}
+          volumeMounts:
+            {{- range $name, $volume := .Values.volumes }}
+            - name: {{ $name }}
+              mountPath: {{ $volume.mountPath }}
+              readOnly: {{ $volume.readOnly }}
+            {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        {{- range $name, $volume := .Values.volumes }}
+        - name: {{ $name }}
+          configMap:
+            name: {{ include "service.fullname" $ }}-{{ $name }}
+            items:
+              {{- range $volumeItem := $volume.items }}
+              - key: {{ $volumeItem.key }}
+                path: {{ $volumeItem.path }}
+              {{- end }}
+        {{- end }}

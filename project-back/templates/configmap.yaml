@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "service.fullname" . }}-config
+data:
+  logback.xml: |-
+    {{- tpl (.Files.Get "config/logback.xml") . | nindent 4 }}
+  env.cfg: |-
+    {{- tpl (.Files.Get "config/env.cfg") . | nindent 4 }}

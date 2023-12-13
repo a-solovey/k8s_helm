@@ -1,0 +1,19 @@
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{35} - %msg %exception %n</pattern>
+        </encoder>
+    </appender>
+
+    {{- range $name, $level := .Values.env.logger.levels }}
+    {{- if ne $name "default" }}
+    <logger name="{{ $name }}" level="{{ $level }}" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+    {{- end }}
+    {{- end }}
+    <root level="{{ .Values.env.logger.levels.default }}">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

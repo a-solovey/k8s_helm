@@ -1,0 +1,68 @@
+replicaCount: 3
+
+image:
+  name: k8s_project/project-front
+  name2: k8s_project/base_images/static_web_server
+  repository: nexus.k8s.rzd
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets:
+- name: regcred
+nameOverride: ""
+fullnameOverride: ""
+clusterDomain: "cluster.local"
+
+podAnnotations: {}
+
+podSecurityContext: {}
+# fsGroup: 2000
+
+securityContext: {}
+# capabilities:
+#   drop:
+#   - ALL
+# readOnlyRootFilesystem: true
+# runAsNonRoot: true
+# runAsUser: 1000
+
+service:
+  type: ClusterIP
+  ports:
+    http:
+      port: 80
+      protocol: TCP
+      exposed: true
+  livenessProbe:
+    path: /
+    port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 2
+  readinessProbe:
+    path: /ready
+    port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 2
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 200Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+volumes:
+
+  config:
+    mountPath: "/usr/share/nginx/html/config.json"
+    subPath: config.json
+    readOnly: true
+    items:
+    - key: "config.json"
+      path: "config.json"

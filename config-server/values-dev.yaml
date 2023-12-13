@@ -1,0 +1,5 @@
+env:
+  db:
+    url: jdbc:postgresql://192.168.2.9:5432/k8s_project
+    user: k8s_user
+    password: k8s_passw0rd

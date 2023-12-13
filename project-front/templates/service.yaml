@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "service.fullname" . }}
+  labels:
+    {{- include "service.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    {{- range $name, $portDesc := .Values.service.ports }}
+    {{- if eq ($portDesc.exposed | default false) true }}
+    - port: {{ $portDesc.port }}
+      targetPort: {{ $portDesc.port }}
+      protocol: {{ $portDesc.protocol }}
+      name: {{ $name }}
+      {{- if eq $.Values.service.type "NodePort" }}
+      nodePort: {{ $portDesc.nodePort }}
+      {{- end -}}
+    {{- end -}}
+    {{- end }}
+  selector:
+    {{- include "service.selectorLabels" . | nindent 4 }}

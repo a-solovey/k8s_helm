@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "service.fullname" . }}-config
+data:
+  config.json: |-
+    {{- tpl (.Files.Get "config/config.json") . | nindent 4 }}

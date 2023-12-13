@@ -1,0 +1,75 @@
+replicaCount: 3
+
+image:
+  name: k8s_project/project-back
+  repository: nexus.k8s.rzd
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets:
+- name: regcred
+nameOverride: ""
+fullnameOverride: ""
+clusterDomain: "cluster.local"
+
+podAnnotations:
+  instrumentation.opentelemetry.io/inject-java: "true"
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+  ports:
+    http:
+      port: 7778
+      protocol: TCP
+      exposed: true
+    management:
+      port: 7778
+      protocol: TCP
+  livenessProbe:
+    path: /actuator/health/liveness
+    port: management
+    initialDelaySeconds: 20
+    periodSeconds: 5
+    failureThreshold: 20
+  readinessProbe:
+    path: /actuator/health/readiness
+    port: management
+    initialDelaySeconds: 20
+    periodSeconds: 5
+    failureThreshold: 20
+
+# resources:
+#   requests:
+#     memory: 700M
+#     cpu: 500m
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+volumes:
+  config:
+    mountPath: "/app/config"
+    readOnly: true
+    items:
+    - key: "logback.xml"
+      path: "logback.xml"
+    - key: "env.cfg"
+      path: "env.cfg"
+
+env:
+  logger:
+    levels:
+      "org.springframework": info
+      default: info
+  jvm:
+    heap:
+      dump:
+        enabled: false
+        path: /tmp/heapdump
+      xms: 100m
+      xmx: 650m

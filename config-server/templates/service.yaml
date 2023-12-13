@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "service.fullname" . }}
+  annotations:
+    metallb.universe.tf/address-pool: first-pool
+  labels:
+    {{- include "service.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    {{- range $name, $portDesc := .Values.service.ports }}
+    {{- if eq ($portDesc.exposed | default false) true }}
+    - port: {{ $portDesc.port }}
+      targetPort: {{ $portDesc.port }}
+      protocol: {{ $portDesc.protocol }}
+      name: {{ $name }}
+    {{- end -}}
+    {{- end }}
+  selector:
+    {{- include "service.selectorLabels" . | nindent 4 }}

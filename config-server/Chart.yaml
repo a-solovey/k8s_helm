@@ -1,0 +1,6 @@
+apiVersion: v2
+name: config-server
+description: config server
+version: 1.0.0
+type: application
+appVersion: 1.0.0
