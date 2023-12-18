@@ -1,0 +1,23 @@
+nameOverride: ""
+fullnameOverride: ""
+clusterDomain: "cluster.local"
+gateway:
+  gatewayServiceName: ingressgateway
+  servers:
+  - port: 80
+    name: http
+    protocol: HTTP
+    hosts:
+    - "192.168.2.8"
+
+routing:
+  routes:
+  - hosts: [192.168.2.8]
+    name: "front-routing"
+    matches:
+    - prefix: /api/project-back/
+      destination: project-back
+      port: 7778
+    - prefix: /
+      destination: project-front
+      port: 80

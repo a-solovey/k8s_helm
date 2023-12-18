@@ -1,0 +1,34 @@
+{{- $gatewayName := include "service.fullname" . }}
+{{- range $route := .Values.routing.routes }}
+{{ if $route.matches }}
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ $route.name }}
+spec:
+  hosts:
+    {{- range $host := $route.hosts }}
+    - {{ $host }}
+    {{- end }}
+  gateways:
+    - {{ $gatewayName }}
+  http:
+    {{- range $match := $route.matches }}
+    - match:
+      - uri:
+          prefix: {{ $match.prefix }}
+      rewrite:
+        uri: {{ $match.rewrite | default "/" }}
+      route:
+        - destination:
+            host: {{ $match.destination }}.{{ $match.namespace | default $.Release.Namespace }}.svc.{{ $.Values.clusterDomain }}
+            port:
+              number: {{ $match.port }}
+          headers:
+            request:
+              add:
+                X-Forwarded-Prefix: {{ $match.prefix }}
+    {{- end }}
+{{- end }}
+{{- end }}
